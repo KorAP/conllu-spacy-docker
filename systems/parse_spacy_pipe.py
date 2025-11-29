@@ -5,7 +5,14 @@ from spacy.tokens import Doc
 import logging, sys, time, signal
 from lib.CoNLL_Annotation import get_token_type
 import my_utils.file_utils as fu
-from germalemma import GermaLemma
+
+# Try to import GermaLemma, but make it optional
+try:
+    from germalemma import GermaLemma
+    GERMALEMMA_AVAILABLE = True
+except ImportError:
+    GERMALEMMA_AVAILABLE = False
+    GermaLemma = None
 
 # Dependency parsing safety limits
 DEFAULT_PARSE_TIMEOUT = 0.5  # seconds per sentence
@@ -236,21 +243,31 @@ if __name__ == "__main__":
 	
 	spacy_de = spacy.load(args.spacy_model, disable=disabled_components)
 	spacy_de.tokenizer = WhitespaceTokenizer(spacy_de.vocab) # We won't re-tokenize to respect how the source CoNLL are tokenized!
-	
+
 	# Increase max_length to handle very long sentences (especially when parser is disabled)
 	spacy_de.max_length = 10000000  # 10M characters
-	
-	lemmatizer = GermaLemma()
+
+	# Initialize GermaLemma if available and requested
+	lemmatizer = None
+	if args.use_germalemma == "True":
+		if GERMALEMMA_AVAILABLE:
+			lemmatizer = GermaLemma()
+		else:
+			logger.warning("GermaLemma requested but not available. Using spaCy lemmatizer instead.")
+			args.use_germalemma = "False"
 	
 	# Log version information
 	logger.info(f"spaCy version: {spacy.__version__}")
 	logger.info(f"spaCy model: {args.spacy_model}")
 	logger.info(f"spaCy model version: {spacy_de.meta.get('version', 'unknown')}")
-	try:
-		import germalemma
-		logger.info(f"GermaLemma version: {germalemma.__version__}")
-	except AttributeError:
-		logger.info("GermaLemma version: unknown (no __version__ attribute)")
+	if GERMALEMMA_AVAILABLE:
+		try:
+			import germalemma
+			logger.info(f"GermaLemma version: {germalemma.__version__}")
+		except AttributeError:
+			logger.info("GermaLemma version: unknown (no __version__ attribute)")
+	else:
+		logger.info("GermaLemma: not installed")
 	
 	# Parse timeout and sentence length limits from environment variables
 	parse_timeout = float(os.getenv("SPACY_PARSE_TIMEOUT", str(DEFAULT_PARSE_TIMEOUT)))

@@ -55,19 +55,22 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
-# Copy virtual environment from builder
-COPY --from=builder /app/venv /app/venv
+# Add non-root user FIRST (before copying files)
+RUN groupadd -r appuser && useradd -r -g appuser appuser
 
-# Copy pre-downloaded models
-COPY --from=builder /local/models /local/models
+# Copy virtual environment from builder and set ownership immediately
+COPY --from=builder --chown=appuser:appuser /app/venv /app/venv
 
-# Copy application code
-COPY lib /app/lib
-COPY systems /app/systems
-COPY my_utils /app/my_utils
-COPY docker-entrypoint.sh /docker-entrypoint.sh
-COPY download_with_progress.py /app/download_with_progress.py
-COPY list_spacy_models.py /app/list_spacy_models.py
+# Copy pre-downloaded models with correct ownership
+COPY --from=builder --chown=appuser:appuser /local/models /local/models
+
+# Copy application code with correct ownership
+COPY --chown=appuser:appuser lib /app/lib
+COPY --chown=appuser:appuser systems /app/systems
+COPY --chown=appuser:appuser my_utils /app/my_utils
+COPY --chown=appuser:appuser download_with_progress.py /app/download_with_progress.py
+COPY --chown=appuser:appuser list_spacy_models.py /app/list_spacy_models.py
+COPY --chown=appuser:appuser docker-entrypoint.sh /docker-entrypoint.sh
 
 # Set environment variables
 ENV VIRTUAL_ENV=/app/venv
@@ -84,23 +87,18 @@ ENV SPACY_BATCH_SIZE="2000"
 ENV SPACY_CHUNK_SIZE="20000"
 
 WORKDIR /app
-RUN mkdir -p "/app/logs" "/app/tmp"
+
+# Create directories with correct ownership
+RUN mkdir -p "/app/logs" "/app/tmp" && \
+    chown -R appuser:appuser "/app/logs" "/app/tmp" && \
+    chmod +x /docker-entrypoint.sh && \
+    chmod +x /app/download_with_progress.py && \
+    chmod +x /app/list_spacy_models.py
 
 # Set temp directories to use app directory instead of system /tmp
 ENV TMPDIR="/app/tmp"
 ENV TEMP="/app/tmp"
 ENV TMP="/app/tmp"
-
-# Add non-root user
-RUN groupadd -r appuser && useradd -r -g appuser appuser
-
-# Make entrypoint executable and set permissions
-RUN chmod +x /docker-entrypoint.sh && \
-    chmod +x /app/download_with_progress.py && \
-    chmod +x /app/list_spacy_models.py
-
-# Change ownership of app directories to appuser
-RUN chown -R appuser:appuser /app /local /docker-entrypoint.sh
 
 # Switch to non-root user
 USER appuser

@@ -1,7 +1,11 @@
-.PHONY: build build-with-models preload-models run test clean
+.PHONY: build build-slim build-with-models preload-models run test clean
 
 build:
 	docker build -t korap/conllu-spacy:latest .
+
+build-slim:
+	docker build -f Dockerfile.slim -t korap/conllu-spacy:slim .
+	@echo "Slim build complete (without GermaLemma, saves ~180MB)"
 
 build-with-models:
 	docker build -f Dockerfile.with-models -t korap/conllu-spacy:with-models .

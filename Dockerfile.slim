@@ -1,3 +1,4 @@
+# Slim version without GermaLemma (saves ~180MB)
 # Multi-stage Docker build for size optimization
 FROM python:3.12-slim-bookworm AS builder
 
@@ -15,12 +16,10 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 # Set the working directory and copy requirements
 WORKDIR /app
-COPY requirements.txt /app/requirements.txt
 
-# Install Python dependencies in virtual environment
+# Install Python dependencies WITHOUT germalemma
 RUN python -m venv venv
-RUN venv/bin/pip install --upgrade pip
-RUN venv/bin/pip install -r requirements.txt
+RUN venv/bin/pip install --upgrade pip wheel thinc spacy
 
 # Production stage
 FROM python:3.12-slim-bookworm AS production
@@ -51,9 +50,9 @@ ENV VIRTUAL_ENV=/app/venv
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 ENV PYTHONPATH="PYTHONPATH:."
 
-# spaCy processing configuration
+# spaCy processing configuration - GermaLemma disabled by default
 ENV SPACY_USE_DEPENDENCIES="True"
-ENV SPACY_USE_GERMALEMMA="True"
+ENV SPACY_USE_GERMALEMMA="False"
 ENV SPACY_PARSE_TIMEOUT="30"
 ENV SPACY_MAX_SENTENCE_LENGTH="500"
 ENV SPACY_N_PROCESS="10"
