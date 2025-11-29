@@ -27,7 +27,36 @@ while getopts "hm:Ldg" opt; do
             model="$OPTARG"
             ;;
         L)
-            python -m spacy info 2>/dev/null || echo "No models installed"
+            echo "=== Installed Models ===" >&2
+
+            # List models installed in venv
+            INSTALLED=$(python -c "import spacy; import pkg_resources; print('\n'.join([pkg.key for pkg in pkg_resources.working_set if pkg.key.endswith(('-sm', '-md', '-lg', '-trf')) and not pkg.key.startswith('spacy')]))" 2>/dev/null)
+
+            if [ -n "$INSTALLED" ]; then
+                echo "$INSTALLED" | while read model; do
+                    # Convert package name to model name (e.g., de-core-news-lg -> de_core_news_lg)
+                    model_name=$(echo "$model" | sed 's/-/_/g')
+                    echo "  $model_name" >&2
+                done
+            else
+                echo "  No models installed in venv" >&2
+            fi
+
+            # Check for models in /local/models
+            if [ -d "/local/models" ] && [ "$(ls -A /local/models 2>/dev/null)" ]; then
+                echo "" >&2
+                echo "Models in /local/models:" >&2
+                ls -1 /local/models/ 2>/dev/null | while read dir; do
+                    if [ -f "/local/models/$dir/config.cfg" ]; then
+                        echo "  $dir" >&2
+                    fi
+                done
+            fi
+
+            echo "" >&2
+
+            # Show available models list
+            python /app/list_spacy_models.py
             exit 0
             ;;
         d)

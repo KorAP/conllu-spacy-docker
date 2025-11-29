@@ -41,6 +41,7 @@ COPY systems /app/systems
 COPY my_utils /app/my_utils
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 COPY download_with_progress.py /app/download_with_progress.py
+COPY list_spacy_models.py /app/list_spacy_models.py
 
 # Set environment variables
 ENV VIRTUAL_ENV=/app/venv
@@ -69,7 +70,8 @@ RUN groupadd -r appuser && useradd -r -g appuser appuser
 
 # Make entrypoint executable and set permissions
 RUN chmod +x /docker-entrypoint.sh && \
-    chmod +x /app/download_with_progress.py
+    chmod +x /app/download_with_progress.py && \
+    chmod +x /app/list_spacy_models.py
 
 # Change ownership of app directories to appuser
 RUN chown -R appuser:appuser /app /local /docker-entrypoint.sh
