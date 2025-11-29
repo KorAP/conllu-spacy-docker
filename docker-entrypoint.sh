@@ -96,16 +96,29 @@ install_model() {
     if [ -w "$MODEL_DIR" ]; then
         # Download and install to /local/models with progress
         if python /app/download_with_progress.py "$model_name" 2>&1 | tee /tmp/spacy_download.log >&2; then
-            # Try to move the installed model to /local/models for persistence
+            # Extract and flatten the model structure for persistence
             SITE_PACKAGES=$(python -c "import site; print(site.getsitepackages()[0])")
             INSTALLED_MODEL="$SITE_PACKAGES/$model_name"
 
             if [ -d "$INSTALLED_MODEL" ]; then
-                echo "Moving model to $MODEL_PATH for persistence..." >&2
-                mv "$INSTALLED_MODEL" "$MODEL_PATH" 2>/dev/null || true
-                # Create symlink back
-                ln -sf "$MODEL_PATH" "$INSTALLED_MODEL" 2>/dev/null || true
-                echo "Model saved to $MODEL_PATH" >&2
+                echo "Extracting model to $MODEL_PATH for persistence..." >&2
+
+                # Find the actual model directory (e.g., de_core_news_lg-3.8.0)
+                VERSIONED_DIR=$(find "$INSTALLED_MODEL" -maxdepth 1 -type d -name "${model_name}-*" | head -1)
+
+                if [ -n "$VERSIONED_DIR" ] && [ -f "$VERSIONED_DIR/config.cfg" ]; then
+                    # Copy the versioned model directory contents to MODEL_PATH
+                    mkdir -p "$MODEL_PATH"
+                    cp -r "$VERSIONED_DIR"/* "$MODEL_PATH/"
+                    # Set permissions so user can modify the model files
+                    chmod -R a+rwX "$MODEL_PATH" 2>/dev/null || true
+                    echo "Model extracted to $MODEL_PATH" >&2
+                else
+                    # Fallback: just move the whole package
+                    echo "Warning: Could not find versioned model directory, moving package as-is" >&2
+                    mv "$INSTALLED_MODEL" "$MODEL_PATH" 2>/dev/null || true
+                    chmod -R a+rwX "$MODEL_PATH" 2>/dev/null || true
+                fi
             fi
             return 0
         else

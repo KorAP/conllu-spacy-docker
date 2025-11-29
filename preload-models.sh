@@ -71,6 +71,10 @@ else:
 "
 
 if [ -d "$TARGET_DIR/$MODEL_NAME" ]; then
+    # Set permissions so all users can read/write/execute
+    echo "Setting permissions..."
+    chmod -R a+rwX "$TARGET_DIR/$MODEL_NAME"
+
     echo ""
     echo "✓ Model $MODEL_NAME successfully preloaded to $TARGET_DIR/$MODEL_NAME"
     echo ""

@@ -64,8 +64,18 @@ ENV TMPDIR="/app/tmp"
 ENV TEMP="/app/tmp"
 ENV TMP="/app/tmp"
 
-# Make entrypoint executable
-RUN chmod +x /docker-entrypoint.sh
+# Add non-root user
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
+# Make entrypoint executable and set permissions
+RUN chmod +x /docker-entrypoint.sh && \
+    chmod +x /app/download_with_progress.py
+
+# Change ownership of app directories to appuser
+RUN chown -R appuser:appuser /app /local /docker-entrypoint.sh
+
+# Switch to non-root user
+USER appuser
 
 # Define the entry point
 ENTRYPOINT ["/docker-entrypoint.sh"]
