@@ -6,9 +6,10 @@ This is a slim, focused implementation extracted from [sota-pos-lemmatizers](htt
 
 ## Features
 
+- **Multi-language support**: Works with any spaCy model for 70+ languages
 - **CoNLL-U input/output**: Reads and writes CoNLL-U format
 - **On-demand model fetching**: Models are downloaded on first run and cached in `/local/models`
-- **GermaLemma integration**: Enhanced lemmatization for German (optional)
+- **GermaLemma integration**: Enhanced lemmatization for German (optional, German models only)
 - **Morphological features**: Extracts and formats morphological features in CoNLL-U format
 - **Dependency parsing**: Optional dependency relations (HEAD/DEPREL columns)
 - **Flexible configuration**: Environment variables for batch size, chunk size, timeouts, etc.
@@ -39,11 +40,17 @@ docker run --rm -i korap/conllu-spacy < input.conllu > output.conllu
 docker run --rm -i korap/conllu-spacy -d < input.conllu > output.conllu
 ```
 
-### Using a different spaCy model
+### Using different language models
 
 ```shell
-# Use a different model (will be downloaded if not available)
+# Use a smaller German model
 docker run --rm -i korap/conllu-spacy -m de_core_news_sm < input.conllu > output.conllu
+
+# Use French model
+docker run --rm -i korap/conllu-spacy -m fr_core_news_lg < input.conllu > output.conllu
+
+# Use English model (disable GermaLemma for non-German)
+docker run --rm -i korap/conllu-spacy -m en_core_web_lg -g < input.conllu > output.conllu
 ```
 
 ### Persisting Models
@@ -189,16 +196,40 @@ Open a shell within the container:
 docker run --rm -it --entrypoint /bin/bash korap/conllu-spacy
 ```
 
-## Supported Models
+## Supported Languages and Models
 
 Any spaCy model can be specified with the `-m` option. Models will be downloaded automatically on first use.
 
-Common German models:
-- `de_core_news_lg` (default, 560MB) - Large German model
-- `de_core_news_md` (100MB) - Medium German model
-- `de_core_news_sm` (15MB) - Small German model
+spaCy provides trained models for **70+ languages**. See [spaCy Models](https://spacy.io/models) for the complete list.
 
-See [spaCy Models](https://spacy.io/models) for a complete list.
+### Example: German models (default)
+- `de_core_news_lg` (default, 560MB) - Large model, best accuracy
+- `de_core_news_md` (100MB) - Medium model, balanced
+- `de_core_news_sm` (15MB) - Small model, fastest
+
+### Example: French models
+```shell
+# Use French small model
+docker run --rm -i -v ./models:/local/models korap/conllu-spacy -m fr_core_news_sm < input.conllu
+```
+- `fr_core_news_lg` (560MB) - Large French model
+- `fr_core_news_md` (100MB) - Medium French model
+- `fr_core_news_sm` (15MB) - Small French model
+
+### Example: English models
+```shell
+# Use English model
+docker run --rm -i -v ./models:/local/models korap/conllu-spacy -m en_core_web_lg < input.conllu
+```
+- `en_core_web_lg` (560MB) - Large English model
+- `en_core_web_md` (100MB) - Medium English model
+- `en_core_web_sm` (15MB) - Small English model
+
+### Other supported languages
+
+Models are available for: Catalan, Chinese, Croatian, Danish, Dutch, Finnish, Greek, Italian, Japanese, Korean, Lithuanian, Macedonian, Norwegian, Polish, Portuguese, Romanian, Russian, Spanish, Swedish, Ukrainian, and many more.
+
+**Note**: GermaLemma integration only works with German models. For other languages, the standard spaCy lemmatizer is used (with `-g` flag to disable GermaLemma).
 
 ## Performance
 

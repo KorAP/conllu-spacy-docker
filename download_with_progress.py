@@ -14,7 +14,7 @@ def main():
     model_name = sys.argv[1]
 
     print(f"Downloading {model_name}...", file=sys.stderr)
-    print("This may take several minutes for large models (de_core_news_lg is ~560MB)", file=sys.stderr)
+    print("This may take several minutes depending on model size", file=sys.stderr)
     print("", file=sys.stderr)
 
     # Run spacy download with unbuffered output
