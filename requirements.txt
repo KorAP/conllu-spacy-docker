@@ -1,0 +1,5 @@
+pip
+wheel
+thinc
+spacy
+germalemma
