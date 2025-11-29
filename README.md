@@ -136,8 +136,25 @@ Options:
   -h            Display help message
   -m MODEL      Specify spaCy model (default: de_core_news_lg)
   -L            List available/installed models
+  -V            Display spaCy version information
   -d            Disable dependency parsing (faster processing)
   -g            Disable GermaLemma (use spaCy lemmatizer only)
+```
+
+### Version Information
+
+To check which version of spaCy and other components are installed:
+
+```shell
+docker run --rm korap/conllu-spacy -V
+```
+
+Example output:
+```
+=== spaCy Version Information ===
+spaCy version: 3.8.11
+GermaLemma version: 0.1.3
+Python version: 3.12.1
 ```
 
 ### Environment Variables

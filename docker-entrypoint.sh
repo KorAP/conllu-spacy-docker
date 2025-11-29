@@ -8,17 +8,18 @@ use_dependencies="True"
 use_germalemma="True"
 
 usage() {
-    echo "Usage: $0 [-h] [-m MODEL] [-L] [-d] [-g]"
+    echo "Usage: $0 [-h] [-m MODEL] [-L] [-V] [-d] [-g]"
     echo "  -h            Display this help message"
     echo "  -m MODEL      Specify spaCy model (default: $model)"
     echo "  -L            List available/installed models"
+    echo "  -V            Display spaCy version information"
     echo "  -d            Disable dependency parsing (faster processing)"
     echo "  -g            Disable GermaLemma (use spaCy lemmatizer only)"
     exit 1
 }
 
 # Parse command line options
-while getopts "hm:Ldg" opt; do
+while getopts "hm:LVdg" opt; do
     case $opt in
         h)
             usage
@@ -57,6 +58,25 @@ while getopts "hm:Ldg" opt; do
 
             # Show available models list
             python /app/list_spacy_models.py
+            exit 0
+            ;;
+        V)
+            echo "=== spaCy Version Information ===" >&2
+            python -c "import spacy; print(f'spaCy version: {spacy.__version__}')" >&2
+
+            # Check for GermaLemma
+            python -c "try:
+    import germalemma
+    try:
+        print(f'GermaLemma version: {germalemma.__version__}')
+    except AttributeError:
+        print('GermaLemma: installed (version unknown)')
+except ImportError:
+    print('GermaLemma: not installed')" >&2
+
+            # Show Python version
+            python -c "import sys; print(f'Python version: {sys.version.split()[0]}')" >&2
+
             exit 0
             ;;
         d)
