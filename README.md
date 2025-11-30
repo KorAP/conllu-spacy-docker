@@ -10,7 +10,7 @@
 
 Docker image for **spaCy** POS tagging, lemmatization and dependency parsing with support for input and output in [CoNLL-U format](https://universaldependencies.org/format.html).
 
-This is a slim, focused implementation extracted from [sota-pos-lemmatizers](https://korap.ids-mannheim.de/gerrit/plugins/gitiles/KorAP/sota-pos-lemmatizers), originally developed by José Angel Daza (@angel-daza), following the same pattern as [conllu-treetagger-docker](https://github.com/KorAP/conllu-treetagger-docker).
+This is a slim, focused implementation extracted from [sota-pos-lemmatizers](https://korap.ids-mannheim.de/gerrit/plugins/gitiles/KorAP/sota-pos-lemmatizers), originally developed by [José Angel Daza](https://github.com/angel-daza), following the same pattern as [conllu-treetagger-docker](https://github.com/KorAP/conllu-treetagger-docker).
 
 ## Features
 

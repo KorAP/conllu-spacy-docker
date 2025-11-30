@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Version numbers follow the pattern: `<spaCy-version>-<release-number>`
 
-## [3.8.11-1] - 2025-01-29
+## [3.8.11-1] - 2025-11-30
 
 ### Added
 - Initial release of conllu-spacy-docker
