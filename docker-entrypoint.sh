@@ -61,7 +61,8 @@ while getopts "hm:LVdg" opt; do
             exit 0
             ;;
         V)
-            echo "=== spaCy Version Information ===" >&2
+            echo "=== Version Information ===" >&2
+            echo "conllu-spacy-docker version: 3.8.11-1" >&2
             python -c "import spacy; print(f'spaCy version: {spacy.__version__}')" >&2
 
             # Check for GermaLemma

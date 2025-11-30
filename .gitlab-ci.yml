@@ -1,0 +1,80 @@
+stages:
+  - test
+  - build
+  - deploy
+
+test-docker-image:
+  image: docker:latest
+  stage: test
+  variables:
+    FF_NETWORK_PER_BUILD: "true"
+  services:
+    - name: docker:dind
+      alias: docker
+      command: ["--dns=127.0.0.11", "--dns=8.8.8.8"]
+  before_script:
+    - apk update
+    - apk add --no-cache bash
+  script:
+    - docker build -t korap/conllu-spacy:test .
+    - echo "Testing version display..."
+    - docker run --rm korap/conllu-spacy:test -V
+    - echo "Testing model listing..."
+    - docker run --rm korap/conllu-spacy:test -L
+
+build-docker-image:
+  image: docker:latest
+  stage: build
+  variables:
+    FF_NETWORK_PER_BUILD: "true"
+  services:
+    - name: docker:dind
+      alias: docker
+      command: ["--dns=127.0.0.11", "--dns=8.8.8.8"]
+  rules:
+    - if: $CI_COMMIT_TAG =~ /.+/
+      variables:
+        VID: $CI_COMMIT_TAG
+    - when: manual
+      variables:
+        VID_ALT: $CI_COMMIT_BRANCH-$CI_COMMIT_SHORT_SHA
+        VID: snapshot
+  cache:
+    key: conllu-spacy
+    paths:
+      - cache/
+  before_script:
+    - mkdir -p cache
+    - apk update
+    - apk add --no-cache bash make xz
+  script:
+    - make build
+    - docker tag korap/conllu-spacy:latest korap/conllu-spacy:$VID
+    - |
+      if [ -n "$VID_ALT" ]; then
+        docker tag korap/conllu-spacy:latest korap/conllu-spacy:$VID_ALT
+      fi
+    - docker save korap/conllu-spacy | xz -T0 > conllu-spacy.xz
+  artifacts:
+    paths:
+      - conllu-spacy.xz
+
+deploy-to-docker-hub:
+  image: docker:latest
+  stage: deploy
+  variables:
+    FF_NETWORK_PER_BUILD: "true"
+  services:
+    - name: docker:dind
+      alias: docker
+      command: ["--dns=127.0.0.11", "--dns=8.8.8.8"]
+  rules:
+    - if: $CI_COMMIT_TAG =~ /.+/
+    - when: manual
+  dependencies:
+    - build-docker-image
+  before_script:
+    - echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USER" --password-stdin
+  script:
+    - xz -d -c conllu-spacy.xz | docker load
+    - docker push --all-tags korap/conllu-spacy

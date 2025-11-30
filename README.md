@@ -1,8 +1,16 @@
 # spaCy Docker Image with CoNLL-U Support
 
+[![CI](https://github.com/KorAP/conllu-spacy-docker/actions/workflows/ci.yml/badge.svg)](https://github.com/KorAP/conllu-spacy-docker/actions/workflows/ci.yml)
+[![Docker Pulls](https://img.shields.io/docker/pulls/korap/conllu-spacy.svg)](https://hub.docker.com/r/korap/conllu-spacy)
+[![Docker Stars](https://img.shields.io/docker/stars/korap/conllu-spacy.svg)](https://hub.docker.com/r/korap/conllu-spacy)
+[![GitHub issues](https://img.shields.io/github/issues/KorAP/conllu-spacy-docker.svg)](https://github.com/KorAP/conllu-spacy-docker/issues)
+[![GitHub closed issues](https://img.shields.io/github/issues-closed/KorAP/conllu-spacy-docker.svg)](https://github.com/KorAP/conllu-spacy-docker/issues?q=is%3Aissue+is%3Aclosed)
+[![GitHub last commit](https://img.shields.io/github/last-commit/KorAP/conllu-spacy-docker.svg)](https://github.com/KorAP/conllu-spacy-docker/commits/master)
+[![License](https://img.shields.io/badge/License-BSD--2--Clause-blue.svg)](LICENSE)
+
 Docker image for **spaCy** POS tagging, lemmatization and dependency parsing with support for input and output in [CoNLL-U format](https://universaldependencies.org/format.html).
 
-This is a slim, focused implementation extracted from [sota-pos-lemmatizers](https://korap.ids-mannheim.de/gerrit/plugins/gitiles/KorAP/sota-pos-lemmatizers), originally developed by José Angel Daza(@angel-daza), following the same pattern as [conllu-treetagger-docker](https://github.com/KorAP/conllu-treetagger-docker).
+This is a slim, focused implementation extracted from [sota-pos-lemmatizers](https://korap.ids-mannheim.de/gerrit/plugins/gitiles/KorAP/sota-pos-lemmatizers), originally developed by José Angel Daza (@angel-daza), following the same pattern as [conllu-treetagger-docker](https://github.com/KorAP/conllu-treetagger-docker).
 
 ## Features
 
@@ -16,12 +24,18 @@ This is a slim, focused implementation extracted from [sota-pos-lemmatizers](htt
 
 ## Installation
 
+### From [Docker Hub](https://hub.docker.com/r/korap/conllu-spacy)
+
+```shell
+docker pull korap/conllu-spacy
+```
+
 ### From source
 
 ```shell
-git clone https://github.com/KorAP/conllu-spacy-tagger-docker.git
-cd conllu-spacy-tagger-docker
-docker build -t korap/conllu-spacy .
+git clone https://github.com/KorAP/conllu-spacy-docker.git
+cd conllu-spacy-docker
+make
 ```
 
 ## Usage
@@ -33,7 +47,7 @@ docker build -t korap/conllu-spacy .
 docker run --rm -i korap/conllu-spacy < input.conllu > output.conllu
 ```
 
-### Faster processing without dependency parsing
+### Without dependency parsing
 
 ```shell
 # Disable dependency parsing for faster processing
@@ -58,6 +72,7 @@ docker run --rm -i korap/conllu-spacy -m en_core_web_lg -g < input.conllu > outp
 To avoid downloading the language model on every run, mount a local directory to `/local/models`:
 
 ```shell
+chmod 777 /path/to/local/models
 docker run --rm -i -v /path/to/local/models:/local/models korap/conllu-spacy < input.conllu > output.conllu
 ```
 
@@ -143,7 +158,7 @@ Options:
 
 ### Version Information
 
-To check which version of spaCy and other components are installed:
+To check which version of conllu-spacy-docker and its components are installed:
 
 ```shell
 docker run --rm korap/conllu-spacy -V
@@ -151,7 +166,8 @@ docker run --rm korap/conllu-spacy -V
 
 Example output:
 ```
-=== spaCy Version Information ===
+=== Version Information ===
+conllu-spacy-docker version: 3.8.11-1
 spaCy version: 3.8.11
 GermaLemma version: 0.1.3
 Python version: 3.12.1
@@ -217,7 +233,7 @@ docker run --rm -it --entrypoint /bin/bash korap/conllu-spacy
 
 Any spaCy model can be specified with the `-m` option. Models will be downloaded automatically on first use.
 
-spaCy provides trained models for **70+ languages**. See [spaCy Models](https://spacy.io/models) for the complete list.
+spaCy provides trained models for 70+ languages. See [spaCy Models](https://spacy.io/models) for the complete list.
 
 ### Example: German models (default)
 - `de_core_news_lg` (default, 560MB) - Large model, best accuracy
@@ -241,10 +257,6 @@ docker run --rm -i -v ./models:/local/models korap/conllu-spacy -m en_core_web_l
 - `en_core_web_lg` (560MB) - Large English model
 - `en_core_web_md` (100MB) - Medium English model
 - `en_core_web_sm` (15MB) - Small English model
-
-### Other supported languages
-
-Models are available for: Catalan, Chinese, Croatian, Danish, Dutch, Finnish, Greek, Italian, Japanese, Korean, Lithuanian, Macedonian, Norwegian, Polish, Portuguese, Romanian, Russian, Spanish, Swedish, Ukrainian, and many more.
 
 **Note**: GermaLemma integration only works with German models. For other languages, the standard spaCy lemmatizer is used (with `-g` flag to disable GermaLemma).
 
@@ -278,6 +290,8 @@ Based on the [sota-pos-lemmatizers](https://korap.ids-mannheim.de/gerrit/plugins
 
 ## License
 
-See the licenses of the individual components:
+This project's source code is licensed under the [BSD 2-Clause License](LICENSE).
+
+See, however, the licenses of the individual components:
 - spaCy: MIT License
 - GermaLemma: Apache 2.0 License
