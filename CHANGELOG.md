@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Version numbers follow the pattern: `<spaCy-version>-<release-number>`
 
+## [Unreleased]
+
+### Fixed
+- Streaming deadlock with korapxmltool on large corpora containing many small
+  documents (e.g. Wikipedia article/discussion dumps), which manifested as
+  near-idle CPU and a progress bar frozen at 0 for hours. The pipe now honors
+  korapxmltool's `# eot`/`# eof` document-delimiter protocol: each document is
+  annotated, emitted, and flushed immediately, so the worker pool can deliver
+  results and release its bounded in-flight buffer slots. Previously `# eot`/
+  `# eof` were swallowed as CoNLL-U comments, output was block-buffered with no
+  flush, and nothing was delivered until the process exited at stdin EOF —
+  which deadlocked once the in-flight buffer filled. Inputs without protocol
+  markers (a CoNLL-U file piped in directly) are still processed in
+  `SPACY_CHUNK_SIZE`-bounded blocks and now stream their output.
+
 ## [3.8.11-1] - 2025-11-30
 
 ### Added

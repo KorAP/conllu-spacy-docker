@@ -3,7 +3,7 @@ import argparse, os
 import spacy
 from spacy.tokens import Doc
 import logging, sys, time, signal
-from lib.CoNLL_Annotation import get_token_type
+from lib.CoNLL_Annotation import get_token_type, read_conll
 import my_utils.file_utils as fu
 
 # Try to import GermaLemma, but make it optional
@@ -181,6 +181,42 @@ def find_germalemma(word, pos, spacy_lemma):
 		return spacy_lemma
 
 
+def iter_documents(line_generator, chunk_size):
+	"""
+	Stream the input as a sequence of (lines, terminator) blocks.
+
+	Honors the korapxmltool worker-pool protocol: a line that is exactly
+	"# eot" or "# eof" ends a document, and the marker is returned as the
+	terminator ("eot"/"eof") so the caller can echo it back and flush. That
+	lets the worker pool deliver each document's result and release its
+	bounded in-flight buffer slot immediately, instead of deadlocking because
+	nothing is emitted until the process exits.
+
+	When the stream carries no such markers (e.g. a CoNLL-U file piped straight
+	in), the buffer is flushed every `chunk_size` completed sentences with
+	terminator None, keeping memory bounded as the previous chunked reader did.
+	"""
+	buffer = []
+	n_sents = 0
+	for line in line_generator:
+		marker = line.rstrip("\r\n")
+		if marker == "# eot":
+			yield buffer, "eot"
+			buffer, n_sents = [], 0
+			continue
+		if marker == "# eof":
+			yield buffer, "eof"
+			return
+		buffer.append(line)
+		if marker.strip() == "":
+			n_sents += 1
+			if chunk_size > 0 and n_sents >= chunk_size:
+				yield buffer, None
+				buffer, n_sents = [], 0
+	if buffer:
+		yield buffer, None
+
+
 if __name__ == "__main__":
 	"""
 		--- Example Real Data TEST  ---
@@ -197,8 +233,7 @@ if __name__ == "__main__":
 	parser.add_argument("-udp", "--use_dependencies", help="Include dependency parsing (adds HEAD/DEPREL columns, set to False for faster processing)", default="True")
 	parser.add_argument("-c", "--comment_str", help="CoNLL Format of comentaries inside the file", default="#")
 	args = parser.parse_args()
-	
-	file_has_next, chunk_ix = True, 0
+
 	CHUNK_SIZE = int(os.getenv("SPACY_CHUNK_SIZE", "20000"))
 	SPACY_BATCH = int(os.getenv("SPACY_BATCH_SIZE", "2000"))
 	SPACY_PROC = int(os.getenv("SPACY_N_PROCESS", "1"))
@@ -279,20 +314,13 @@ if __name__ == "__main__":
 	total_processed_sents = 0
 	dependency_warnings = 0
 	
-	while file_has_next:
-		annos, file_has_next = fu.get_file_annos_chunk(stdin, chunk_size=CHUNK_SIZE, token_class=get_token_type(args.gld_token_type), comment_str=args.comment_str, our_foundry="spacy")
-		if len(annos) == 0: break
-		total_processed_sents += len(annos)
-		
-		# Calculate progress statistics
-		elapsed_time = time.time() - start
-		sents_per_sec = total_processed_sents / elapsed_time if elapsed_time > 0 else 0
-		current_time = time.strftime("%Y-%m-%d %H:%M:%S")
-		
-		logger.info(f"{current_time} | Processed: {total_processed_sents} sentences | Elapsed: {elapsed_time:.1f}s | Speed: {sents_per_sec:.1f} sents/sec")
-		
+	token_class = get_token_type(args.gld_token_type)
+
+	def annotate(annos, base_sent_no):
+		"""Annotate a document's sentences, write CoNLL-U to stdout, return the dependency-warning count."""
+		warnings = 0
 		sents = [a.get_sentence() for a in annos]
-		
+
 		# Process sentences individually when dependency parsing is enabled for timeout protection
 		if args.use_dependencies == "True":
 			for ix, sent in enumerate(sents):
@@ -300,9 +328,9 @@ if __name__ == "__main__":
 					spacy_de, sent, timeout=parse_timeout, max_length=max_sentence_length
 				)
 				if warning:
-					dependency_warnings += 1
-					logger.warning(f"Sentence {total_processed_sents - len(sents) + ix + 1}: {warning}")
-				
+					warnings += 1
+					logger.warning(f"Sentence {base_sent_no + ix + 1}: {warning}")
+
 				# Override use_dependencies based on actual parsing success
 				actual_use_dependencies = "True" if dependency_success else "False"
 				conll_str = get_conll_str(annos[ix], doc, use_germalemma=args.use_germalemma, use_dependencies=actual_use_dependencies)
@@ -324,12 +352,48 @@ if __name__ == "__main__":
 						conll_str = get_conll_str(annos[ix], doc, use_germalemma=args.use_germalemma, use_dependencies=args.use_dependencies)
 						print(conll_str+ "\n")
 					except Exception as sent_error:
-						logger.error(f"Failed to process sentence {total_processed_sents - len(sents) + ix + 1}: {str(sent_error)}")
+						logger.error(f"Failed to process sentence {base_sent_no + ix + 1}: {str(sent_error)}")
 						logger.error(f"Sentence preview: {sent[:100]}...")
 						# Output a placeholder to maintain alignment
 						conll_str = get_conll_str(annos[ix], spacy_de("ERROR"), use_germalemma=args.use_germalemma, use_dependencies=args.use_dependencies)
 						print(conll_str+ "\n")
-			
+		return warnings
+
+	# Stream the input document-by-document.  Each "# eot"/"# eof" delimited
+	# document is annotated, emitted, and flushed immediately so korapxmltool's
+	# worker pool can deliver the result and release its in-flight buffer slot
+	# (avoiding the deadlock on large corpora with many small documents).
+	# Inputs without protocol markers (a CoNLL-U file piped in directly) are
+	# still processed in CHUNK_SIZE-bounded blocks and streamed out.
+	last_log_time = start
+	for block_lines, terminator in iter_documents(stdin, CHUNK_SIZE):
+		annos, _ = read_conll(iter(block_lines), 0, token_class=token_class, comment_str=args.comment_str, our_foundry="spacy")
+		if annos:
+			dependency_warnings += annotate(annos, total_processed_sents)
+			total_processed_sents += len(annos)
+
+		# Echo the protocol marker back so korapxmltool can pair the output with
+		# the source document and release the in-flight buffer slot, then flush
+		# so the bytes actually reach the reader instead of sitting in stdout's
+		# block buffer.
+		if terminator == "eot":
+			sys.stdout.write("# eot\n")
+		elif terminator == "eof":
+			sys.stdout.write("# eof\n")
+		sys.stdout.flush()
+
+		# Throttle progress logging so per-document streaming doesn't flood the log.
+		now = time.time()
+		if now - last_log_time >= 2.0 or terminator == "eof":
+			last_log_time = now
+			elapsed_time = now - start
+			sents_per_sec = total_processed_sents / elapsed_time if elapsed_time > 0 else 0
+			current_time = time.strftime("%Y-%m-%d %H:%M:%S")
+			logger.info(f"{current_time} | Processed: {total_processed_sents} sentences | Elapsed: {elapsed_time:.1f}s | Speed: {sents_per_sec:.1f} sents/sec")
+
+		if terminator == "eof":
+			break
+	
 	end = time.time()
 	total_time = end - start
 	final_sents_per_sec = total_processed_sents / total_time if total_time > 0 else 0
