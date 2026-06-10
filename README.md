@@ -167,7 +167,7 @@ docker run --rm korap/conllu-spacy -V
 Example output:
 ```
 === Version Information ===
-conllu-spacy-docker version: 3.8.11-1
+conllu-spacy-docker version: 3.8.11-2
 spaCy version: 3.8.11
 GermaLemma version: 0.1.3
 Python version: 3.12.1
