@@ -1,5 +1,5 @@
-pip
-wheel
-thinc
-spacy
-germalemma
+pip==25.3
+wheel==0.45.1
+thinc==8.3.10
+spacy==3.8.11
+germalemma==0.1.3
