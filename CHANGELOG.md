@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Version numbers follow the pattern: `<spaCy-version>-<release-number>`
 
-## [Unreleased]
+## [3.8.11-3] - 2026-06-19
 
 ### Fixed
 - Worker-pool cascade crash on corpora containing a token whose surface form
@@ -73,5 +73,6 @@ Version numbers follow the pattern: `<spaCy-version>-<release-number>`
 - Batch processing for performance
 - Compatible with korapxmltool
 
+[3.8.11-3]: https://github.com/KorAP/conllu-spacy-docker/releases/tag/3.8.11-3
 [3.8.11-2]: https://github.com/KorAP/conllu-spacy-docker/releases/tag/3.8.11-2
 [3.8.11-1]: https://github.com/KorAP/conllu-spacy-docker/releases/tag/3.8.11-1
