@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Version numbers follow the pattern: `<spaCy-version>-<release-number>`
 
+## [Unreleased]
+
+### Fixed
+- Worker-pool cascade crash on corpora containing a token whose surface form
+  (FORM) is whitespace (e.g. a lone space). Such a token collapsed the
+  tab-separated CoNLL-U line under `str.split()`, leaving 9 fields instead of
+  10 and raising `IndexError` on the score column. The exception was uncaught
+  and killed the whole streaming process, so korapxmltool's worker pool saw a
+  broken pipe, re-queued the in-flight documents, and re-crashed on the same
+  poisoned input until every worker died — observed as running threads dropping
+  off one-by-one after tens of thousands of texts. `CoNLLUP_Token` now parses
+  on the tab delimiter (preserving whitespace FORM columns), falls back to
+  whitespace splitting for space-delimited input, and pads short lines to the
+  10 CoNLL-U columns. As defense-in-depth, a parse/annotation failure for a
+  single document is now logged and skipped while still echoing its
+  `# eot`/`# eof` marker, so one bad document can no longer take down the run.
+
 ## [3.8.11-2] - 2026-06-10
 
 ### Fixed

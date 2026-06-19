@@ -73,7 +73,20 @@ class RNNTagger_Token():
 
 class CoNLLUP_Token():
     def __init__(self, raw_line, word_ix):
-        info = raw_line.split()
+        # CoNLL-U is tab-separated with 10 columns. Split on the tab so that a
+        # token whose FORM is whitespace (e.g. a surface form that is a single
+        # space) keeps its column position instead of collapsing it -- a bare
+        # raw_line.split() would drop the empty FORM field, shift every column
+        # left, and raise IndexError on info[9], which crashes the whole
+        # streaming process and cascades into broken pipes across the worker
+        # pool. Fall back to a generic whitespace split for space-delimited
+        # inputs, then pad to 10 columns so a genuinely malformed/short line
+        # degrades gracefully rather than killing the stream.
+        info = raw_line.rstrip("\n").split("\t")
+        if len(info) < 10:
+            info = raw_line.split()
+        if len(info) < 10:
+            info = info + ["_"] * (10 - len(info))
         # print(info)
         # [ID, FORM, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC]
         # [11, Prügel, Prügel, NN, NN, _, _, _,	_, 1.000000]

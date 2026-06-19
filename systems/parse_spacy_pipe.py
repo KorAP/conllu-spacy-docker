@@ -367,10 +367,19 @@ if __name__ == "__main__":
 	# still processed in CHUNK_SIZE-bounded blocks and streamed out.
 	last_log_time = start
 	for block_lines, terminator in iter_documents(stdin, CHUNK_SIZE):
-		annos, _ = read_conll(iter(block_lines), 0, token_class=token_class, comment_str=args.comment_str, our_foundry="spacy")
-		if annos:
-			dependency_warnings += annotate(annos, total_processed_sents)
-			total_processed_sents += len(annos)
+		# Never let one malformed document take down the whole stream: a parse
+		# or annotation failure here would otherwise crash the process, break
+		# the pipe, and make korapxmltool's worker pool re-queue and re-crash on
+		# the same poisoned input until every worker dies. Log it, skip the
+		# document, and still echo the protocol marker below so the worker pool
+		# releases its in-flight slot.
+		try:
+			annos, _ = read_conll(iter(block_lines), 0, token_class=token_class, comment_str=args.comment_str, our_foundry="spacy")
+			if annos:
+				dependency_warnings += annotate(annos, total_processed_sents)
+				total_processed_sents += len(annos)
+		except Exception as doc_error:
+			logger.error(f"Skipping document after failure ({terminator or 'chunk'}): {str(doc_error)}")
 
 		# Echo the protocol marker back so korapxmltool can pair the output with
 		# the source document and release the in-flight buffer slot, then flush
